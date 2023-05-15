@@ -1,0 +1,123 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="style.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <title>Document</title>
+</head>
+<body>
+    
+    <div class="container chat-container">
+        <div class="card chat-card">
+            <div id="msg-box" class="inbox">
+               
+            </div>
+            <input type="text" class="message" id="text-msg" placeholder="Enter Msg....">
+            <div class="record-sec">
+                <img onclick="sendRequest(document.getElementById('text-msg').value)" src="assets/forward.png" alt="" class="record-img">
+                <img onclick="runSpeechRecognition()" src="assets/record.png" alt="" class="record-img">
+            </div>
+        </div>
+    </div>
+  
+</body>
+</html>
+
+<script>
+    var old_text = "";
+    var tts = window.speechSynthesis;
+    var voices = [];
+    GetVoices();
+    if(speechSynthesis !== undefined){
+        speechSynthesis.onvoiceschanged = GetVoices;
+    }
+    function sendRequest(question){
+        text = "Sorry!"
+
+        var settings = {
+            "url": "https://gmbapi.multipliersolutions.in/chat",
+            "method": "POST",
+            "timeout": 0,
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "data": JSON.stringify({
+                "message": question
+            }),
+            };
+
+            $.ajax(settings).done(function (response) {
+                console.log(response);
+                // obj = JSON.parse(response)
+                text = response['response']
+                set_msg(question,text)
+                var toSpeak = new SpeechSynthesisUtterance(text);
+                var selectedVoiceName = "Microsoft Ravi - English (India)";//voiceList.selectedOptions[0].getAttribute('data-name')
+                voices.forEach((voice)=>{
+                    if(voice.name === selectedVoiceName){
+                        toSpeak.voice = voice;
+                    }
+                });
+                tts.speak(toSpeak);
+            });
+        
+    }
+    function GetVoices(){
+        voices = tts.getVoices();
+        voiceList.innerHTML ='';
+        voices.forEach((voice)=>{
+            var listItem = document.createElement('option');
+            listItem.textContent = voice.name;
+            listItem.setAttribute('data-lang', voice.lang);
+            listItem.setAttribute('data-name', voice.name);
+            voiceList.appendChild(listItem);
+        });
+        voiceList.selectedIndex = 0;
+    }
+    function set_msg(question,text){
+        text = '<div class="sender">'+question+'</div><br><br><div class="receiver">'+text+'</div><br><br>';
+        $("#msg-box").append(text);
+        document.getElementById('text-msg').value = "";
+    }
+</script>
+
+
+<script>
+    /* JS comes here */
+    function runSpeechRecognition() {
+        // get output div reference
+        var output = document.getElementById("output");
+        // get action element reference
+        var action = document.getElementById("action");
+        // new speech recognition object
+        var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition;
+        var recognition = new SpeechRecognition();
+    
+        // This runs when the speech recognition service starts
+        recognition.onstart = function() {
+            action.innerHTML = "<small>listening, please speak...</small>";
+        };
+        
+        recognition.onspeechend = function() {
+            action.innerHTML = "<small>stopped listening, hope you are done...</small>";
+            recognition.stop();
+        }
+        
+        // This runs when the speech recognition service returns result
+        recognition.onresult = function(event) {
+            var transcript = event.results[0][0].transcript;
+            var confidence = event.results[0][0].confidence;
+            
+            sendRequest(transcript)
+        };
+        
+            // start recognition
+            recognition.start();
+    }
+</script>
